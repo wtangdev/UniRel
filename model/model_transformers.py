@@ -16,7 +16,7 @@ class UniRelOutput(ModelOutput):
 
 class UniRelModel(BertPreTrainedModel):
     """
-    predict masked entitiy and compute wether is predict right as MLM
+    Model for learning Interaction Map
     """
     def __init__(self, config, model_dir=None):
         super(UniRelModel, self).__init__(config=config)
@@ -55,6 +55,7 @@ class UniRelModel(BertPreTrainedModel):
     ):
         TOKEN_LEN = token_len_batch[0]
         tail_logits = None
+        # For span extraction
         head_logits= None
         span_logits = None
         # 
