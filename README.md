@@ -37,7 +37,25 @@ We use the `bert-base-cased` model from Huggingface, you can download it by foll
 All parameter are listed in the script `run_nyt.sh` and `run_webnlg.sh`. By run with command `bash run_nyt.sh` can do train and evaluation.
 
 # Citation
-TBD
+```
+@inproceedings{tang-etal-2022-unirel,
+    title = "{U}ni{R}el: Unified Representation and Interaction for Joint Relational Triple Extraction",
+    author = "Tang, Wei  and
+      Xu, Benfeng  and
+      Zhao, Yuyue  and
+      Mao, Zhendong  and
+      Liu, Yifeng  and
+      Liao, Yong  and
+      Xie, Haiyong",
+    booktitle = "Proceedings of the 2022 Conference on Empirical Methods in Natural Language Processing",
+    month = dec,
+    year = "2022",
+    address = "Abu Dhabi, United Arab Emirates",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2022.emnlp-main.477",
+    pages = "7087--7099",
+}
+```
 
 ---
 
