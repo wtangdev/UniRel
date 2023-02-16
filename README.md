@@ -22,15 +22,18 @@ UniRel is implemented with `Python == 3.8` and `pytorch == 1.7.1`, Other main re
 - transformers == 4.12.5
 - wandb 
 
-The detail requirments could be found at `requiremetns.txt`
+The detail requirments could be found at `requirements.txt`
 
 ## Data
 
-We obtain the data from TPLinker, please kindly refer to [TPLinker officail repository](https://github.com/131250208/TPlinker-joint-extraction)
+We obtain the data from TPLinker, please kindly refer to [TPLinker officail repository](https://github.com/131250208/TPlinker-joint-extraction). Change two filename of the download data: 
+- `train_data.json` -> `train_split.json`
+- `test_triples.json` -> `test_data.json`
+
 
 ## Pretrained Model
 
-We use the `bert-base-cased` model from Huggingface, you can download it by following their [instrcution](https://huggingface.co/bert-base-cased?text=The+goal+of+life+is+%5BMASK%5D.) or let Transformers to automatically download. After that, place the files at root directory of the project.
+We use the `bert-base-cased` model from Huggingface, you can download it by following their [instrcution](https://huggingface.co/bert-base-cased?text=The+goal+of+life+is+%5BMASK%5D.) or let Transformers to automatically download. After that, place the files at the root directory of the project (`./bert-base-cased`).
 
 ## Train & Evalutaion
 
