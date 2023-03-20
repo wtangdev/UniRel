@@ -1,6 +1,8 @@
 # UniRel
 
-Released code for our EMNLP22 paper: UniRel: Unified Representation and Interaction for Joint Relational Triple Extraction
+Released code for our EMNLP22 paper: UniRel: Unified Representation and Interaction for Joint Relational Triple Extraction.
+
+Join the [Discord](https://discord.gg/RGSruSmA8s) if there are any questions.
 
 
 # Model
