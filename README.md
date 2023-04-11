@@ -32,6 +32,8 @@ We obtain the data from TPLinker, please kindly refer to [TPLinker officail repo
 - `train_data.json` -> `train_split.json`
 - `test_triples.json` -> `test_data.json`
 
+You can also download the data from [here](https://drive.google.com/file/d/1-3uBc_VfaCEWO2_FegzSyBXNeFmqhv7x/view)
+
 
 ## Pretrained Model
 
