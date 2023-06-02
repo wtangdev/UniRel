@@ -2,6 +2,7 @@ import collections
 import logging
 import os
 import sys
+import csv
 import glob
 from dataclasses import dataclass, field
 from typing import Optional
@@ -18,7 +19,7 @@ from transformers.hf_argparser import HfArgumentParser
 from transformers import EvalPrediction, set_seed
 
 from dataprocess.data_processor import UniRelDataProcessor
-from dataprocess.dataset import UniRelDataset
+from dataprocess.dataset import UniRelDataset, UniRelSpanDataset
 
 from model.model_transformers import  UniRelModel
 from dataprocess.data_extractor import *
@@ -27,37 +28,45 @@ from dataprocess.data_metric import *
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 DataProcessorDict = {
-    "nyt_all_sa": UniRelDataProcessor
+    "nyt_all_sa": UniRelDataProcessor,
+    "unirel_span": UniRelDataProcessor
 }
 
 DatasetDict = {
-   "nyt_all_sa": UniRelDataset
+    "nyt_all_sa": UniRelDataset,
+    "unirel_span": UniRelSpanDataset 
 }
 
 ModelDict = {
-    "nyt_all_sa": UniRelModel
+    "nyt_all_sa": UniRelModel,
+    "unirel_span": UniRelModel
 }
 
 PredictModelDict = {
-    "nyt_all_sa": UniRelModel
+    "nyt_all_sa": UniRelModel,
+    "unirel_span": UniRelModel
 }
 
 DataMetricDict = {
-    "nyt_all_sa": unirel_metric
+    "nyt_all_sa": unirel_metric,
+    "unirel_span": unirel_span_metric
 }
 
 PredictDataMetricDict = {
-    "nyt_all_sa": unirel_metric
+    "nyt_all_sa": unirel_metric,
+    "unirel_span": unirel_span_metric
 
 }
 
 DataExtractDict = {
-    "nyt_all_sa": unirel_extractor
+    "nyt_all_sa": unirel_extractor,
+    "unirel_span": unirel_span_extractor
 
 }
 
 LableNamesDict = {
-    "nyt_all_sa": ["tail_label"],
+    "nyt_all_sa": [ "tail_label"],
+    "unirel_span":["head_label", "tail_label", "span_label"],
 }
 
 InputFeature = collections.namedtuple(
@@ -263,6 +272,7 @@ if __name__ == '__main__':
     config.num_rels = data_processor.num_rels
     config.is_additional_att = run_args.is_additional_att
     config.is_separate_ablation = run_args.is_separate_ablation
+    config.test_data_type = run_args.test_data_type
 
 
     model = ModelType(config=config, model_dir=run_args.model_dir)
@@ -299,11 +309,7 @@ if __name__ == '__main__':
                         f"{training_args.output_dir}/checkpoint-*/{transformers.file_utils.WEIGHTS_NAME}",
                         recursive=True)))
         else:
-            checkpoints = list(
-                os.path.dirname(c) for c in sorted(
-                    glob.glob(
-                        f"{run_args.checkpoint_dir}/checkpoint-*/{transformers.file_utils.WEIGHTS_NAME}",
-                        recursive=True)))
+            checkpoints = [run_args.checkpoint_dir] 
         logger.info(f"Test the following checkpoints: {checkpoints}")
         best_f1 = 0
         best_checkpoint = None
@@ -323,10 +329,10 @@ if __name__ == '__main__':
                               eval_dataset=dev_dataset,
                               callbacks=[MyCallback])
 
-            eval_res = trainer.evaluate(
-                eval_dataset=dev_dataset, metric_key_prefix="test")
-            result = {f"{k}_{global_step}": v for k, v in eval_res.items()}
-            results.update(result)
+            # eval_res = trainer.evaluate(
+            #     eval_dataset=dev_dataset, metric_key_prefix="test")
+            # result = {f"{k}_{global_step}": v for k, v in eval_res.items()}
+            # results.update(result)
             dev_predictions = trainer.predict(dev_dataset)
             p,r,f1 =  ExtractType(tokenizer, dev_dataset, dev_predictions, output_dir)
             if f1 > best_f1:

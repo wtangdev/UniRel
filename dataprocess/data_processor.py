@@ -169,7 +169,9 @@ class UniRelDataProcessor(object):
             'text': [],
             "spo_list": [],
             "spo_span_list": [],
+            "head_label": [],
             "tail_label": [],
+            "span_label": []
         }
         token_len_big_than_100 = 0
         token_len_big_than_150 = 0
@@ -194,8 +196,13 @@ class UniRelDataProcessor(object):
             spo_list = set()
             spo_span_list = set()
             # [CLS] texts [SEP] rels
+            head_matrix = np.zeros([token_len + 2 + self.num_rels,
+                                    token_len + 2 + self.num_rels])
             tail_matrix = np.zeros(
                 [token_len + 2 + self.num_rels, token_len + 2 + self.num_rels])
+            span_matrix = np.zeros(
+                [token_len + 2 + self.num_rels, token_len + 2 + self.num_rels])
+
 
             e2e_set = set()
             h2r_dict = dict()
@@ -220,12 +227,28 @@ class UniRelDataProcessor(object):
                 h_s, h_e = sub_span
                 t_s, t_e = obj_span
                 # Entity-Entity Interaction
+                head_matrix[h_s+1][t_s+1] = 1
+                head_matrix[t_s+1][h_s+1] = 1
                 tail_matrix[h_e][t_e] = 1
                 tail_matrix[t_e][h_e] = 1
+                span_matrix[h_s+1][h_e] = 1
+                span_matrix[h_e][h_s+1] = 1
+                span_matrix[t_s+1][t_e] = 1
+                span_matrix[t_e][t_s+1] = 1
                 # Subject-Relation Interaction
+                head_matrix[h_s+1][plus_token_pred_idx] = 1
                 tail_matrix[h_e][plus_token_pred_idx] = 1
+                span_matrix[h_s+1][plus_token_pred_idx] = 1
+                span_matrix[h_e][plus_token_pred_idx] = 1
+                span_matrix[t_s+1][plus_token_pred_idx] = 1
+                span_matrix[t_e][plus_token_pred_idx] = 1
                 # Relation-Object Interaction
+                head_matrix[plus_token_pred_idx][t_s+1] = 1
                 tail_matrix[plus_token_pred_idx][t_e] = 1
+                span_matrix[plus_token_pred_idx][t_s+1] = 1
+                span_matrix[plus_token_pred_idx][t_e] = 1
+                span_matrix[plus_token_pred_idx][h_s+1] = 1
+                span_matrix[plus_token_pred_idx][h_e] = 1
                 
                 spo_tail_set.add((h_e, plus_token_pred_idx, t_e))
                 spo_tail_text_set.add((
@@ -244,7 +267,9 @@ class UniRelDataProcessor(object):
             outputs["text"].append(text)
             outputs["spo_list"].append(list(spo_list))
             outputs["spo_span_list"].append(list(spo_span_list))
+            outputs["head_label"].append(head_matrix)
             outputs["tail_label"].append(tail_matrix)
+            outputs["span_label"].append(span_matrix)
 
             data_count += 1
             if data_count >= max_data_nums:
