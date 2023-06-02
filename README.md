@@ -7,7 +7,7 @@ Join the [Discord](https://discord.gg/RGSruSmA8s) if there are any questions.
 # Updates
 - 2023-06-01
   - Add multi-token entity implementation.
-  - Provide `UniRel` class in `predict.py` for easy inference and a [checkpoint](https://drive.google.com/drive/folders/1poRbtpm5ddbwUk3mVQ2-4G_o3OPXjYNq?usp=sharing) trained on nyt (multi-token) for tring.
+  - Provide `UniRel` class in `predict.py` for easy inference and a [checkpoint](https://drive.google.com/drive/folders/1poRbtpm5ddbwUk3mVQ2-4G_o3OPXjYNq?usp=sharing) trained on nyt (multi-token) for trying.
 
 # Model
 ![Model Structure](assets/model.png)
@@ -43,7 +43,7 @@ You can also download the data from [here](https://drive.google.com/file/d/1-3uB
 
 We use the `bert-base-cased` model from Huggingface, you can download it by following their [instrcution](https://huggingface.co/bert-base-cased?text=The+goal+of+life+is+%5BMASK%5D.) or let Transformers to automatically download. After that, place the files at the root directory of the project (`./bert-base-cased`).
 
-I provided a checkpoint for tring `predict`. You can download [here](https://drive.google.com/drive/folders/1poRbtpm5ddbwUk3mVQ2-4G_o3OPXjYNq?usp=sharing).
+I provided a checkpoint for trying `predict`. You can download [here](https://drive.google.com/drive/folders/1poRbtpm5ddbwUk3mVQ2-4G_o3OPXjYNq?usp=sharing).
 
 ## Train & Evalutaion
 
