@@ -38,7 +38,7 @@ class UniRelModel(BertPreTrainedModel):
         if config.is_additional_att or config.is_separate_ablation:
             self.key_linear = nn.Linear(768, 64)
             self.value_linear = nn.Linear(768, 64)
-
+        # print(f"self.config.threshold: {self.config.threshold}")
     def forward(
         self,
         input_ids=None,
@@ -90,7 +90,8 @@ class UniRelModel(BertPreTrainedModel):
                 tail_logits = nn.Sigmoid()(
                         attentions_scores[:, :, :, :].mean(1)
                     )
-        else:
+            # print(f'attentions_scores shape: {attentions_scores.shape}')
+        else:   # is_separate_ablation
             # Encoding the sentence and relations in a separate manner, and add another attention layer
             TOKEN_LEN = token_len_batch[0]
             text_outputs = self.bert(
