@@ -12,6 +12,8 @@ import numpy as np
 import torch
 # from torch.utils.tensorboard import SummaryWriter
 
+import wandb
+
 from transformers import (BertTokenizerFast, BertModel, Trainer,
                           TrainingArguments, BertConfig, BertLMHeadModel)
 
@@ -169,6 +171,7 @@ if __name__ == '__main__':
 
     set_seed(training_args.seed)
 
+    # it's merely an annotation for type checking and readability purposes.
     training_args: TrainingArguments
     run_args: RunArguments
 
@@ -203,8 +206,8 @@ if __name__ == '__main__':
     DataProcessorType = DataProcessorDict[run_args.test_data_type]
     metric_type = DataMetricDict[run_args.test_data_type]
     predict_metric_type = PredictDataMetricDict[run_args.test_data_type]
-    DatasetType = DatasetDict[run_args.test_data_type]
-    ExtractType = DataExtractDict[run_args.test_data_type]
+    DatasetType = DatasetDict[run_args.test_data_type]  # encode text, correct format for all inputs
+    ExtractType = DataExtractDict[run_args.test_data_type]  # Extractor triples from the modeled Attention matrix
     ModelType = ModelDict[run_args.test_data_type]
     PredictModelType = PredictModelDict[run_args.test_data_type]
     training_args.label_names = LableNamesDict[run_args.test_data_type]
@@ -273,12 +276,26 @@ if __name__ == '__main__':
     config.is_additional_att = run_args.is_additional_att
     config.is_separate_ablation = run_args.is_separate_ablation
     config.test_data_type = run_args.test_data_type
+    print(f"config: {config}")
 
 
     model = ModelType(config=config, model_dir=run_args.model_dir)
+    # actually, for nyt, the embedding layer does not change
     model.resize_token_embeddings(len(tokenizer))
 
-   
+    # set the wandb project where this run will be logged
+    # start a new wandb run to track this script
+    wandb.init(
+        project="Unirel",
+        name="Unirel-original-NYT)",
+    )
+
+    # save your trained model checkpoint to wandb
+    os.environ["WANDB_LOG_MODEL"] = "true"
+
+    # turn off watch to log faster
+    os.environ["WANDB_WATCH"] = "false"
+
     if training_args.do_train:
         trainer = Trainer(
             model=model,
@@ -287,12 +304,19 @@ if __name__ == '__main__':
             eval_dataset=dev_dataset,
             compute_metrics=metric_type,
         )
+
+        print(f"training_args: \n{training_args}")
         train_result = trainer.train()
         trainer.save_model(
             output_dir=f"{trainer.args.output_dir}/checkpoint-final/")
         output_train_file = os.path.join(training_args.output_dir,
                                          "train_results.txt")
         # trainer.evaluate()
+        #  This method is commonly used in scripts to guard statements
+        #  that should only be executed by one process in a distributed
+        #  training setup. For example, saving a model checkpoint or
+        #  writing logs to a file should ideally be done by only one
+        #  process to prevent overwrites or unnecessary duplication.
         if trainer.is_world_process_zero():
             with open(output_train_file, "w") as writer:
                 logger.info("***** Train Results *****")
@@ -323,6 +347,7 @@ if __name__ == '__main__':
             global_step = checkpoint.split("-")[1]
             prefix = checkpoint.split(
                 "/")[-1] if checkpoint.find("checkpoint") != -1 else ""
+            # here it reload the model from the checkpoint
             model = PredictModelType.from_pretrained(checkpoint, config=config)
             trainer = Trainer(model=model,
                               args=training_args,

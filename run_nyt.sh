@@ -1,9 +1,9 @@
-export CUDA_VISIBLE_DEVICES=6
+export CUDA_VISIBLE_DEVICES=0
 python3 run.py \
     --task_name UniRel \
     --max_seq_length 100 \
-    --per_device_train_batch_size 12 \
-    --per_device_eval_batch_size 12 \
+    --per_device_train_batch_size 24 \
+    --per_device_eval_batch_size 24 \
     --learning_rate 3e-5 \
     --num_train_epochs 100 \
     --logging_dir ./tb_logs \
@@ -15,7 +15,7 @@ python3 run.py \
     --model_dir ./bert-base-cased/ \
     --output_dir ./output/nyt \
     --overwrite_output_dir \
-    --dataset_dir YourDataDir \
+    --dataset_dir ./dataset/ \
     --dataloader_pin_memory \
     --dataloader_num_workers 4 \
     --lr_scheduler_type cosine \
@@ -24,4 +24,5 @@ python3 run.py \
     --dataset_name nyt \
     --test_data_type unirel_span \
     --threshold 0.5 \
+    --report_to wandb \
     --do_train

@@ -31,6 +31,7 @@ def unirel_span_metric(p: EvalPrediction):
         y_pred=head_preds.reshape(-1),
         y_true=head_labels.reshape(-1),
         labels=[1],
+        # Calculate metrics globally by counting the total true positives, false negatives, and false positives.
         average='micro')
     tail_acc, tail_recall, tail_f1, _ = precision_recall_fscore_support(
         y_pred=tail_preds.reshape(-1),

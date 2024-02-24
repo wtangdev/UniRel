@@ -78,6 +78,7 @@ class UniRel:
             self.pred2idx[k] = idx
             self.pred_str += self.pred2text[k] + " "
             idx += 1
+        print(f'pred2idx: {self.pred2idx}')
         self.num_rels = len(self.pred2text.keys())
         print(f'relations: \n{self.pred2text.keys()}')
         print(f'num_rels: {self.num_rels}')
@@ -252,9 +253,9 @@ if __name__ == "__main__":
 
     # print(unirel.predict("Adisham Hall in Sri Lanka was constructed between 1927 and 1931 at St Benedicts Monastery , Adisham , Haputhale , Sri Lanka in the Tudor and Jacobean style of architecture"))
 
-    t = "I don't think the Yunnan government or any other organization has dominion over the jungles of Xishuangbanna."
+    # t = "I don't think the Yunnan government or any other organization has dominion over the jungles of Xishuangbanna."
     # less sensitive to negative statements.
-
+    t = "But that spasm of irritation by a master intimidator was minor compared with what Bobby Fischer , the erratic former world chess champion , dished out in March at a news conference in Reykjavik , Iceland ."
     print(unirel.predict(t))
     # print(unirel._data_process(t))
     # print(unirel.predict([

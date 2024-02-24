@@ -54,6 +54,7 @@ class UniRelDataProcessor(object):
 
         self._get_labels()
         if dataset_name == "nyt":
+            # self.pred2text: {relation: one-word-representation}
             self.pred2text=dataprocess.rel2text.nyt_rel2text
             # self.pred2text = {key: "[unused"+str(i+1)+"]" for i, key in enumerate(self.label2id.keys())}
         elif dataset_name == "nyt_star":
@@ -110,6 +111,7 @@ class UniRelDataProcessor(object):
             self.pred2idx[k] = idx
             self.pred_str += self.pred2text[k] + " "
             idx += 1
+        # self.pred_str: all relations in natural language, not token id: "rel0 rel1 rel2 ... reln"
         self.pred_str = self.pred_str[:-1]
         self.idx2pred = {value: key for key, value in self.pred2idx.items()}
         self.num_labels = self.num_rels
@@ -147,8 +149,8 @@ class UniRelDataProcessor(object):
         # else:
         label_set = set()
         for path in [self.train_path, self.dev_path, self.test_path]:
-            fp = open(path)
-            samples = json.load(fp)
+            with open(path) as fp:
+                samples = json.load(fp)
             for data in samples:
                 sample = data
                 for spo in sample["relation_list"]:
@@ -165,6 +167,7 @@ class UniRelDataProcessor(object):
         self.label2id = {val: key for key, val in self.id2label.items()}
 
     def _pre_process(self, path, token_len, is_predict, data_nums):
+        # this doesn't tokenized the input_ids, only generate the matrices
         outputs = {
             'text': [],
             "spo_list": [],
@@ -218,15 +221,19 @@ class UniRelDataProcessor(object):
                 sub = spo["subject"]
                 obj = spo["object"]
                 spo_list.add((sub, pred, obj))
+                # subj_tok_span and obj_tok_span are span's pos in the sentence
                 sub_span = spo["subj_tok_span"]
                 obj_span = spo["obj_tok_span"]
                 pred_idx = self.pred2idx[pred]
                 plus_token_pred_idx = pred_idx + token_len + 2
+                # spo_span_list: {((h_s, h_e), pred_idx, (t_s, t_e)), (), ...}
                 spo_span_list.add((tuple(sub_span), pred_idx, tuple(obj_span)))
 
                 h_s, h_e = sub_span
                 t_s, t_e = obj_span
                 # Entity-Entity Interaction
+                # plus 1 or not is because of the dataset's format
+                # so here the start pos plus 1, the end pos not
                 head_matrix[h_s+1][t_s+1] = 1
                 head_matrix[t_s+1][h_s+1] = 1
                 tail_matrix[h_e][t_e] = 1
@@ -265,7 +272,9 @@ class UniRelDataProcessor(object):
                 e2e_set.add((t_e, h_e))
 
             outputs["text"].append(text)
+            # spo_list: {(sub, pred(original format), obj), (), ...}
             outputs["spo_list"].append(list(spo_list))
+            # spo_span_list: {((h_s, h_e), pred_idx, (t_s, t_e)), (), ...}
             outputs["spo_span_list"].append(list(spo_span_list))
             outputs["head_label"].append(head_matrix)
             outputs["tail_label"].append(tail_matrix)
