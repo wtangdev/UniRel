@@ -16,12 +16,12 @@ class UniRelOutput(ModelOutput):
     tail_preds: Optional[torch.FloatTensor] = None
     span_preds: Optional[torch.FloatTensor] = None
 
-class UniRelModel(BertPreTrainedModel):
+class UniRelModel_ner(BertPreTrainedModel):
     """
     Model for learning Interaction Map
     """
     def __init__(self, config, model_dir=None):
-        super(UniRelModel, self).__init__(config=config)
+        super(UniRelModel_ner, self).__init__(config=config)
         self.config = config
         if model_dir is not None:
             self.bert = BertModel.from_pretrained(model_dir, config=config)
@@ -39,6 +39,7 @@ class UniRelModel(BertPreTrainedModel):
             self.key_linear = nn.Linear(768, 64)
             self.value_linear = nn.Linear(768, 64)
         # print(f"self.config.threshold: {self.config.threshold}")
+        self.sigmoid = nn.Sigmoid()
     def forward(
         self,
         input_ids=None,
@@ -49,6 +50,10 @@ class UniRelModel(BertPreTrainedModel):
         head_label=None,
         tail_label=None,
         span_label=None,
+        loc_label=None,
+        org_label=None,
+        per_label=None,
+        country_label=None,
         position_ids=None,
         head_mask=None,
         inputs_embeds=None,
@@ -77,15 +82,21 @@ class UniRelModel(BertPreTrainedModel):
             BATCH_SIZE, ATT_HEADS, ATT_LEN, _ = attentions_scores.size()
             ATT_LAYERS = len(attentions_scores)
             if self.config.test_data_type == "unirel_span":
-                head_logits = nn.Sigmoid()(
-                        attentions_scores[:, :4, :, :].mean(1)
+            # 0-2: head, 3-5: tail, 6-7: span, 8: LOC, 9: ORG, 10: PER, 11: Country
+                head_logits = self.sigmoid(
+                        attentions_scores[:, :3, :, :].mean(1)
                     )
-                tail_logits = nn.Sigmoid()(
-                        attentions_scores[:, 4:8, :, :].mean(1)
+                tail_logits = self.sigmoid(
+                        attentions_scores[:, 3:6, :, :].mean(1)
                     )
-                span_logits = nn.Sigmoid()(
-                        attentions_scores[:, 8:, :, :].mean(1)
+                span_logits = self.sigmoid(
+                        attentions_scores[:, 6:8, :, :].mean(1)
                     )
+                loc_logits = self.sigmoid(attentions_scores[:, 8, :, :])
+                org_logits = self.sigmoid(attentions_scores[:, 9, :, :])
+                per_logits = self.sigmoid(attentions_scores[:, 10, :, :])
+                country_logits = self.sigmoid(attentions_scores[:, 11, :, :])
+
             else:
                 tail_logits = nn.Sigmoid()(
                         attentions_scores[:, :, :, :].mean(1)
@@ -145,6 +156,35 @@ class UniRelModel(BertPreTrainedModel):
                 loss = span_loss
             else:
                 loss += span_loss
+
+        if loc_label is not None and len(loc_label[0]) == len(span_label[0]):
+            loc_loss = nn.BCELoss()(loc_logits.float().reshape(-1),
+                                    loc_label.reshape(-1).float())
+            if loss is None:
+                loss = loc_loss
+            else:
+                loss += loc_loss
+        if org_label is not None and len(org_label[0]) == len(span_label[0]):
+            org_loss = nn.BCELoss()(org_logits.float().reshape(-1),
+                                    org_label.reshape(-1).float())
+            if loss is None:
+                loss = org_loss
+            else:
+                loss += org_loss
+        if per_label is not None and len(per_label[0]) == len(span_label[0]):
+            per_loss = nn.BCELoss()(per_logits.float().reshape(-1),
+                                    per_label.reshape(-1).float())
+            if loss is None:
+                loss = per_loss
+            else:
+                loss += per_loss
+        if country_label is not None and len(country_label[0]) == len(span_label[0]):
+            country_loss = nn.BCELoss()(country_logits.float().reshape(-1),
+                                    country_label.reshape(-1).float())
+            if loss is None:
+                loss = country_loss
+            else:
+                loss += country_loss
         if tail_logits is not None:
             tail_predictions = tail_logits > self.config.threshold
         else:
@@ -157,6 +197,22 @@ class UniRelModel(BertPreTrainedModel):
             span_predictions = span_logits > self.config.threshold
         else:
             span_predictions = None
+        if loc_loss is not None:
+            loc_predictions = loc_logits > self.config.threshold
+        else:
+            loc_predictions = None
+        if org_loss is not None:
+            org_predictions = org_logits > self.config.threshold
+        else:
+            org_predictions = None
+        if per_loss is not None:
+            per_predictions = per_logits > self.config.threshold
+        else:
+            per_predictions = None
+        if country_loss is not None:
+            country_predictions = country_logits > self.config.threshold
+        else:
+            country_predictions = None
 
         return UniRelOutput(
             loss=loss,

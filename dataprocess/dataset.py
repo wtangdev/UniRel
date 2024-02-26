@@ -119,6 +119,10 @@ class UniRelSpanDataset(Dataset):
         self.head_labels = samples["head_label"]
         self.tail_labels = samples["tail_label"]
         self.span_labels = samples["span_label"]
+        self.loc_labels = samples["loc_label"]
+        self.org_labels = samples["org_label"]
+        self.per_labels = samples["per_label"]
+        self.country_labels = samples["country_label"]
 
         self.max_label_len = data_processor.max_label_len
         self.pred2text = data_processor.pred2text
@@ -140,6 +144,28 @@ class UniRelSpanDataset(Dataset):
         head_label = torch.tensor(self.head_labels[idx], dtype=torch.long)
         tail_label = torch.tensor(self.tail_labels[idx], dtype=torch.long)
         span_label = torch.tensor(self.span_labels[idx], dtype=torch.long)
+
+        loc_label_ = torch.zeros_like(span_label, dtype=torch.long),
+        org_label_ = torch.zeros_like(span_label, dtype=torch.long),
+        per_label_ = torch.zeros_like(span_label, dtype=torch.long),
+        country_label_ = torch.zeros_like(span_label, dtype=torch.long),
+
+        loc_label = loc_label_[0]
+        for ids in self.loc_labels[idx]:
+            loc_label[ids[0], ids[1]] = 1
+
+        org_label = org_label_[0]
+        for ids in self.org_labels[idx]:
+            org_label[ids[0], ids[1]] = 1
+
+        per_label = per_label_[0]
+        for ids in self.per_labels[idx]:
+            per_label[ids[0], ids[1]] = 1
+
+        country_label = country_label_[0]
+        for ids in self.country_labels[idx]:
+            country_label[ids[0], ids[1]] = 1
+
         sep_idx = inputs["input_ids"].index(self.tokenizer.sep_token_id)
         input_ids = inputs["input_ids"] + self.pred_inputs["input_ids"]
         input_ids[sep_idx] = self.tokenizer.pad_token_id
@@ -147,6 +173,8 @@ class UniRelSpanDataset(Dataset):
         attention_mask = inputs["attention_mask"] + [1] * num_rels
         attention_mask[sep_idx] = 0
         token_type_ids = inputs["token_type_ids"] + [1] * num_rels
+
+
 
 
         return {
@@ -164,6 +192,10 @@ class UniRelSpanDataset(Dataset):
             "head_label": head_label,
             "tail_label": tail_label,
             "span_label": span_label,
+            "loc_label": loc_label,
+            "org_label": org_label,
+            "per_label": per_label,
+            "country_label": country_label
         }
 
     def __len__(self):

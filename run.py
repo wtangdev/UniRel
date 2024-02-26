@@ -6,6 +6,7 @@ import csv
 import glob
 from dataclasses import dataclass, field
 from typing import Optional
+from utils import data_collator
 
 import transformers
 import numpy as np
@@ -24,6 +25,8 @@ from dataprocess.data_processor import UniRelDataProcessor
 from dataprocess.dataset import UniRelDataset, UniRelSpanDataset
 
 from model.model_transformers import  UniRelModel
+from model.model_transformers_ner import UniRelModel_ner
+
 from dataprocess.data_extractor import *
 from dataprocess.data_metric import *
 
@@ -40,13 +43,15 @@ DatasetDict = {
 }
 
 ModelDict = {
-    "nyt_all_sa": UniRelModel,
-    "unirel_span": UniRelModel
+    # "nyt_all_sa": UniRelModel,
+    "nyt_all_sa": UniRelModel_ner,
+    "unirel_span": UniRelModel_ner
 }
 
 PredictModelDict = {
-    "nyt_all_sa": UniRelModel,
-    "unirel_span": UniRelModel
+    # "nyt_all_sa": UniRelModel,
+    "nyt_all_sa": UniRelModel_ner,
+    "unirel_span": UniRelModel_ner
 }
 
 DataMetricDict = {
@@ -216,11 +221,13 @@ if __name__ == '__main__':
     data_processor = DataProcessorType(root=run_args.dataset_dir,
                                        tokenizer=tokenizer,
                                        dataset_name=run_args.dataset_name)
+
     train_samples = data_processor.get_train_sample(
-        token_len=run_args.max_seq_length, data_nums=run_args.train_data_nums)
+         token_len=run_args.max_seq_length, data_nums=run_args.train_data_nums)
+
     dev_samples = data_processor.get_dev_sample(
         token_len=150, data_nums=run_args.test_data_nums)
-    
+
     # For special experiment wants to test on specific testset
     if run_args.test_data_path is not None:
         test_samples = data_processor.get_specific_test_sample(
@@ -242,6 +249,7 @@ if __name__ == '__main__':
         predict=False,
         eval_type="train",
     )
+
     # 150 is big enough for both NYT and WebNLG testset
     dev_dataset = DatasetType(
         dev_samples,
@@ -267,7 +275,6 @@ if __name__ == '__main__':
         predict=True,
         eval_type="test"
     )
-
     config = BertConfig.from_pretrained(run_args.model_dir,
                                         finetuning_task=run_args.task_name)
     config.threshold = run_args.threshold
@@ -278,16 +285,16 @@ if __name__ == '__main__':
     config.test_data_type = run_args.test_data_type
     print(f"config: {config}")
 
-
     model = ModelType(config=config, model_dir=run_args.model_dir)
     # actually, for nyt, the embedding layer does not change
     model.resize_token_embeddings(len(tokenizer))
 
     # set the wandb project where this run will be logged
     # start a new wandb run to track this script
+
     wandb.init(
         project="Unirel",
-        name="Unirel-original-NYT)",
+        name="Unirel-ner(LOC,ORG,PER,COUNTRY)-NYT-bsz24)",
     )
 
     # save your trained model checkpoint to wandb
@@ -301,11 +308,10 @@ if __name__ == '__main__':
             model=model,
             args=training_args,
             train_dataset=train_dataset,
-            eval_dataset=dev_dataset,
+            # eval_dataset=dev_dataset,
             compute_metrics=metric_type,
         )
-
-        print(f"training_args: \n{training_args}")
+        # print(f"training_args: \n{training_args}")
         train_result = trainer.train()
         trainer.save_model(
             output_dir=f"{trainer.args.output_dir}/checkpoint-final/")
@@ -333,7 +339,7 @@ if __name__ == '__main__':
                         f"{training_args.output_dir}/checkpoint-*/{transformers.file_utils.WEIGHTS_NAME}",
                         recursive=True)))
         else:
-            checkpoints = [run_args.checkpoint_dir] 
+            checkpoints = [run_args.checkpoint_dir]
         logger.info(f"Test the following checkpoints: {checkpoints}")
         best_f1 = 0
         best_checkpoint = None
@@ -348,32 +354,37 @@ if __name__ == '__main__':
             prefix = checkpoint.split(
                 "/")[-1] if checkpoint.find("checkpoint") != -1 else ""
             # here it reload the model from the checkpoint
-            model = PredictModelType.from_pretrained(checkpoint, config=config)
-            trainer = Trainer(model=model,
-                              args=training_args,
-                              eval_dataset=dev_dataset,
-                              callbacks=[MyCallback])
+            with torch.no_grad():
+                model = PredictModelType.from_pretrained(checkpoint, config=config)
+                model.eval()
+                trainer = Trainer(model=model,
+                                  args=training_args,
+                                  eval_dataset=dev_dataset,
+                                  callbacks=[MyCallback])
 
-            # eval_res = trainer.evaluate(
-            #     eval_dataset=dev_dataset, metric_key_prefix="test")
-            # result = {f"{k}_{global_step}": v for k, v in eval_res.items()}
-            # results.update(result)
-            dev_predictions = trainer.predict(dev_dataset)
-            p,r,f1 =  ExtractType(tokenizer, dev_dataset, dev_predictions, output_dir)
-            if f1 > best_f1:
-                best_f1 = f1
-                best_checkpoint = checkpoint
+                # eval_res = trainer.evaluate(
+                #     eval_dataset=dev_dataset, metric_key_prefix="test")
+                # result = {f"{k}_{global_step}": v for k, v in eval_res.items()}
+                # results.update(result)
+                dev_predictions = trainer.predict(dev_dataset)
+                p, r, f1 = ExtractType(tokenizer, dev_dataset, dev_predictions, output_dir)
+                if f1 > best_f1:
+                    best_f1 = f1
+                    best_checkpoint = checkpoint
+                # clean the torch cache
+                torch.cuda.empty_cache()
 
         # Do test
         logger.info(f"Best checkpoint at {best_checkpoint} with f1 = {best_f1}")
         model = PredictModelType.from_pretrained(best_checkpoint, config=config)
+        model.eval()
         trainer = Trainer(model=model,
                             args=training_args,
-                            eval_dataset=dev_dataset,
+                            # eval_dataset=dev_dataset,
                             callbacks=[MyCallback])
 
         test_prediction = trainer.predict(test_dataset)
         output_dir = os.path.join(training_args.output_dir, best_checkpoint.split("/")[-1])
         ExtractType(tokenizer, test_dataset, test_prediction, output_dir)
-            
+
     print("Here I am")

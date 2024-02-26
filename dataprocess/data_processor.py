@@ -174,7 +174,11 @@ class UniRelDataProcessor(object):
             "spo_span_list": [],
             "head_label": [],
             "tail_label": [],
-            "span_label": []
+            "span_label": [],
+            "loc_label": [],
+            "org_label": [],
+            "per_label": [],
+            "country_label": [],
         }
         token_len_big_than_100 = 0
         token_len_big_than_150 = 0
@@ -206,6 +210,19 @@ class UniRelDataProcessor(object):
             span_matrix = np.zeros(
                 [token_len + 2 + self.num_rels, token_len + 2 + self.num_rels])
 
+            loc_head = [7, 10, 11, 23]
+            loc_tail = [4, 8, 9, 10, 11, 12, 18, 19, 22]
+            org_head = [0, 1, 2, 3, 4, 22]
+            org_tail = [5, 6, 20, 23]
+            per_head = [5, 6, 12, 15, 16, 17, 18, 19, 20, 21]
+            per_tail = [0, 1, 3, 14, 15]
+            country_head = [8, 9]
+            country_tail = [8, 13, 17]
+
+            loc_idx = []
+            org_idx = []
+            per_idx = []
+            country_idx = []
 
             e2e_set = set()
             h2r_dict = dict()
@@ -256,7 +273,52 @@ class UniRelDataProcessor(object):
                 span_matrix[plus_token_pred_idx][t_e] = 1
                 span_matrix[plus_token_pred_idx][h_s+1] = 1
                 span_matrix[plus_token_pred_idx][h_e] = 1
-                
+                # LOC_head and LOC_tail
+                loc_idx.append([plus_token_pred_idx, t_s+1])
+                loc_idx.append([plus_token_pred_idx, t_e])
+                loc_idx.append([plus_token_pred_idx, h_s+1])
+                loc_idx.append([plus_token_pred_idx, h_e])
+                if pred_idx in loc_head:
+                    loc_idx.append([h_s+1, h_s+1])
+                    loc_idx.append([h_e, h_e])
+                if pred_idx in loc_tail:
+                    loc_idx.append([t_s+1, t_s+1])
+                    loc_idx.append([t_e, t_e])
+                # ORG_head and ORG_tail
+                org_idx.append([plus_token_pred_idx, h_s+1])
+                org_idx.append([plus_token_pred_idx, h_e])
+                org_idx.append([plus_token_pred_idx, t_s+1])
+                org_idx.append([plus_token_pred_idx, t_e])
+                if pred_idx in org_head:
+                    org_idx.append([h_s+1, h_s+1])
+                    org_idx.append([h_e, h_e])
+                if pred_idx in org_tail:
+                    org_idx.append([t_s+1, t_s+1])
+                    org_idx.append([t_e, t_e])
+                # PER_head and PER_tail
+                per_idx.append([plus_token_pred_idx, h_s+1])
+                per_idx.append([plus_token_pred_idx, h_e])
+                per_idx.append([plus_token_pred_idx, t_s+1])
+                per_idx.append([plus_token_pred_idx, t_e])
+                if pred_idx in per_head:
+                    per_idx.append([h_s+1, h_s+1])
+                    per_idx.append([h_e, h_e])
+                if pred_idx in per_tail:
+                    per_idx.append([t_s+1, t_s+1])
+                    per_idx.append([t_e, t_e])
+                # Country_head and Country_tail
+                country_idx.append([plus_token_pred_idx, h_s+1])
+                country_idx.append([plus_token_pred_idx, h_e])
+                country_idx.append([plus_token_pred_idx, t_s+1])
+                country_idx.append([plus_token_pred_idx, t_e])
+                if pred_idx in country_head:
+                    country_idx.append([h_s+1, h_s+1])
+                    country_idx.append([h_e, h_e])
+                if pred_idx in country_tail:
+                    country_idx.append([t_s+1, t_s+1])
+                    country_idx.append([t_e, t_e])
+
+
                 spo_tail_set.add((h_e, plus_token_pred_idx, t_e))
                 spo_tail_text_set.add((
                     self.tokenizer.decode(input_ids[h_e]),
@@ -279,6 +341,10 @@ class UniRelDataProcessor(object):
             outputs["head_label"].append(head_matrix)
             outputs["tail_label"].append(tail_matrix)
             outputs["span_label"].append(span_matrix)
+            outputs["loc_label"].append(loc_idx)
+            outputs["org_label"].append(org_idx)
+            outputs["per_label"].append(per_idx)
+            outputs["country_label"].append(country_idx)
 
             data_count += 1
             if data_count >= max_data_nums:

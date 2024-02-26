@@ -8,6 +8,40 @@ import logging
 import unicodedata, re
 
 
+
+def data_collator(features):
+    # the data_collator will receive a list of samples to collate, |features| = bsz.
+    # in each item of the batch:
+    # {'input_ids', 'attention_mask', 'token_type_ids', 'token_len_batch', 'head_label', 'tail_label', 'span_label', 'loc_label', 'org_label', 'per_label', 'country_label'}
+    batch_item = []
+    for item in features:
+        item_dict = {
+            'input_ids': item['input_ids'],
+            'attention_mask': item['attention_mask'],
+            'token_type_ids': item['token_type_ids'],
+            'token_len_batch': item['token_len_batch'],
+            'head_label': item['head_label'],
+            'tail_label': item['tail_label'],
+            'span_label': item['span_label'],
+            # Initialize labels as tensors filled with zeros, matching the shape and type directly
+            'loc_label': torch.zeros_like(item['span_label'], dtype=torch.long),
+            'org_label': torch.zeros_like(item['span_label'], dtype=torch.long),
+            'per_label': torch.zeros_like(item['span_label'], dtype=torch.long),
+            'country_label': torch.zeros_like(item['span_label'], dtype=torch.long),
+        }
+
+        for label_type in ['loc_label', 'org_label', 'per_label', 'country_label']:
+            if label_type in item:
+                for idx in item[label_type]:
+                    item_dict[label_type][idx[0], idx[1]] = 1
+
+        batch_item.append(item_dict)
+
+    return batch_item
+
+
+
+
 def load_json(input_file):
     with open(input_file, 'r') as f:
         samples = json.load(f)

@@ -25,7 +25,7 @@ def unirel_metric(p: EvalPrediction):
     }
 
 def unirel_span_metric(p: EvalPrediction):
-    head_labels, tail_labels, span_labels = p.label_ids
+    head_labels, tail_labels, span_labels, _, _, _, _ = p.label_ids
     head_preds, tail_preds, span_preds = p.predictions
     head_acc, head_recall, head_f1, _ = precision_recall_fscore_support(
         y_pred=head_preds.reshape(-1),
@@ -49,6 +49,37 @@ def unirel_span_metric(p: EvalPrediction):
         "head_f1": head_f1,
         "tail_acc": tail_acc,
         "tail_recall": tail_recall, 
+        "tail_f1": tail_f1,
+        "span_acc": span_acc,
+        "span_recall": span_recall,
+        "span_f1": span_f1,
+    }
+
+def unirel_span_ner_metric(p: EvalPrediction):
+    head_labels, tail_labels, span_labels = p.label_ids
+    head_preds, tail_preds, span_preds = p.predictions
+    head_acc, head_recall, head_f1, _ = precision_recall_fscore_support(
+        y_pred=head_preds.reshape(-1),
+        y_true=head_labels.reshape(-1),
+        labels=[1],
+        # Calculate metrics globally by counting the total true positives, false negatives, and false positives.
+        average='micro')
+    tail_acc, tail_recall, tail_f1, _ = precision_recall_fscore_support(
+        y_pred=tail_preds.reshape(-1),
+        y_true=tail_labels.reshape(-1),
+        labels=[1],
+        average='micro')
+    span_acc, span_recall, span_f1, _ = precision_recall_fscore_support(
+        y_pred=span_preds.reshape(-1),
+        y_true=span_labels.reshape(-1),
+        labels=[1],
+        average='micro')
+    return {
+        "head_acc": head_acc,
+        "head_recall": head_recall,
+        "head_f1": head_f1,
+        "tail_acc": tail_acc,
+        "tail_recall": tail_recall,
         "tail_f1": tail_f1,
         "span_acc": span_acc,
         "span_recall": span_recall,

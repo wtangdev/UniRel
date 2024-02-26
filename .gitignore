@@ -1,3 +1,8 @@
 /dataset/
 /model/nyt-checkpoint-final/
 /training/
+/wandb/
+/output/
+/test_data/
+/tb_logs/
+/wandb/

@@ -1,6 +1,6 @@
 export CUDA_VISIBLE_DEVICES=0
 python3 run.py \
-    --task_name UniRel \
+    --task_name UniRel_ner \
     --max_seq_length 100 \
     --per_device_train_batch_size 24 \
     --per_device_eval_batch_size 24 \
@@ -13,7 +13,7 @@ python3 run.py \
     --evaluation_strategy steps \
     --warmup_ratio 0.1 \
     --model_dir ./bert-base-cased/ \
-    --output_dir ./output/nyt \
+    --output_dir ./output/nyt-ner-LOC-ORG-PER-COUNTRY \
     --overwrite_output_dir \
     --dataset_dir ./dataset/ \
     --dataloader_pin_memory \
