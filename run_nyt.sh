@@ -13,7 +13,7 @@ python3 run.py \
     --evaluation_strategy steps \
     --warmup_ratio 0.1 \
     --model_dir ./bert-base-cased/ \
-    --output_dir ./output/nyt-ner-LOC-ORG-PER-COUNTRY \
+    --output_dir ./output/nyt-ner-LOC-PER \
     --overwrite_output_dir \
     --dataset_dir ./dataset/ \
     --dataloader_pin_memory \

@@ -294,7 +294,7 @@ if __name__ == '__main__':
 
     wandb.init(
         project="Unirel",
-        name="Unirel-ner(LOC,ORG,PER,COUNTRY)-NYT-bsz24)",
+        name="Unirel-ner(LOC,PER)-NYT-bsz24)",
     )
 
     # save your trained model checkpoint to wandb
@@ -317,6 +317,7 @@ if __name__ == '__main__':
             output_dir=f"{trainer.args.output_dir}/checkpoint-final/")
         output_train_file = os.path.join(training_args.output_dir,
                                          "train_results.txt")
+        
         # trainer.evaluate()
         #  This method is commonly used in scripts to guard statements
         #  that should only be executed by one process in a distributed
@@ -342,6 +343,8 @@ if __name__ == '__main__':
             checkpoints = [run_args.checkpoint_dir]
         logger.info(f"Test the following checkpoints: {checkpoints}")
         best_f1 = 0
+        best_p = 0
+        best_r = 0
         best_checkpoint = None
         # Find best model on devset
         for checkpoint in checkpoints:
@@ -354,6 +357,8 @@ if __name__ == '__main__':
             prefix = checkpoint.split(
                 "/")[-1] if checkpoint.find("checkpoint") != -1 else ""
             # here it reload the model from the checkpoint
+
+            """            
             with torch.no_grad():
                 model = PredictModelType.from_pretrained(checkpoint, config=config)
                 model.eval()
@@ -373,9 +378,35 @@ if __name__ == '__main__':
                     best_checkpoint = checkpoint
                 # clean the torch cache
                 torch.cuda.empty_cache()
+                """
+            # directly using test_dataset to do test
+            with torch.no_grad():
+                model = PredictModelType.from_pretrained(checkpoint, config=config)
+                model.eval()
+                trainer = Trainer(model=model,
+                                  args=training_args,
+                                  eval_dataset=test_dataset,
+                                  callbacks=[MyCallback])
+
+                # eval_res = trainer.evaluate(
+                #     eval_dataset=dev_dataset, metric_key_prefix="test")
+                # result = {f"{k}_{global_step}": v for k, v in eval_res.items()}
+                # results.update(result)
+                test_predictions = trainer.predict(test_dataset)
+                p, r, f1 = ExtractType(tokenizer, test_dataset, test_predictions, output_dir)
+                if f1 > best_f1:
+                    best_f1 = f1
+                    best_p = p
+                    best_r = r
+                    best_checkpoint = checkpoint
+                # clean the torch cache
+                torch.cuda.empty_cache()
 
         # Do test
+        logger.info(f"Best checkpoint at {best_checkpoint} \n{{'all-prec': {best_p}, 'all-recall': {best_r}, 'all-f1': {best_f1}}}")
+        """ 
         logger.info(f"Best checkpoint at {best_checkpoint} with f1 = {best_f1}")
+       
         model = PredictModelType.from_pretrained(best_checkpoint, config=config)
         model.eval()
         trainer = Trainer(model=model,
@@ -386,5 +417,6 @@ if __name__ == '__main__':
         test_prediction = trainer.predict(test_dataset)
         output_dir = os.path.join(training_args.output_dir, best_checkpoint.split("/")[-1])
         ExtractType(tokenizer, test_dataset, test_prediction, output_dir)
+        """
 
     print("Here I am")

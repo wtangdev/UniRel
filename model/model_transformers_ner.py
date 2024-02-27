@@ -92,10 +92,10 @@ class UniRelModel_ner(BertPreTrainedModel):
                 span_logits = self.sigmoid(
                         attentions_scores[:, 6:8, :, :].mean(1)
                     )
-                loc_logits = self.sigmoid(attentions_scores[:, 8, :, :])
-                org_logits = self.sigmoid(attentions_scores[:, 9, :, :])
-                per_logits = self.sigmoid(attentions_scores[:, 10, :, :])
-                country_logits = self.sigmoid(attentions_scores[:, 11, :, :])
+                loc_logits = self.sigmoid(attentions_scores[:, 8:10, :, :].mean(1))
+                # org_logits = self.sigmoid(attentions_scores[:, 9, :, :])
+                per_logits = self.sigmoid(attentions_scores[:, 10:, :, :].mean(1))
+                # country_logits = self.sigmoid(attentions_scores[:, 11, :, :])
 
             else:
                 tail_logits = nn.Sigmoid()(
@@ -164,13 +164,13 @@ class UniRelModel_ner(BertPreTrainedModel):
                 loss = loc_loss
             else:
                 loss += loc_loss
-        if org_label is not None and len(org_label[0]) == len(span_label[0]):
-            org_loss = nn.BCELoss()(org_logits.float().reshape(-1),
-                                    org_label.reshape(-1).float())
-            if loss is None:
-                loss = org_loss
-            else:
-                loss += org_loss
+        # if org_label is not None and len(org_label[0]) == len(span_label[0]):
+        #     org_loss = nn.BCELoss()(org_logits.float().reshape(-1),
+        #                             org_label.reshape(-1).float())
+        #     if loss is None:
+        #         loss = org_loss
+        #     else:
+        #         loss += org_loss
         if per_label is not None and len(per_label[0]) == len(span_label[0]):
             per_loss = nn.BCELoss()(per_logits.float().reshape(-1),
                                     per_label.reshape(-1).float())
@@ -178,13 +178,13 @@ class UniRelModel_ner(BertPreTrainedModel):
                 loss = per_loss
             else:
                 loss += per_loss
-        if country_label is not None and len(country_label[0]) == len(span_label[0]):
-            country_loss = nn.BCELoss()(country_logits.float().reshape(-1),
-                                    country_label.reshape(-1).float())
-            if loss is None:
-                loss = country_loss
-            else:
-                loss += country_loss
+        # if country_label is not None and len(country_label[0]) == len(span_label[0]):
+        #     country_loss = nn.BCELoss()(country_logits.float().reshape(-1),
+        #                             country_label.reshape(-1).float())
+        #     if loss is None:
+        #         loss = country_loss
+        #     else:
+        #         loss += country_loss
         if tail_logits is not None:
             tail_predictions = tail_logits > self.config.threshold
         else:
@@ -201,18 +201,18 @@ class UniRelModel_ner(BertPreTrainedModel):
             loc_predictions = loc_logits > self.config.threshold
         else:
             loc_predictions = None
-        if org_loss is not None:
-            org_predictions = org_logits > self.config.threshold
-        else:
-            org_predictions = None
+        # if org_loss is not None:
+        #     org_predictions = org_logits > self.config.threshold
+        # else:
+        #     org_predictions = None
         if per_loss is not None:
             per_predictions = per_logits > self.config.threshold
         else:
             per_predictions = None
-        if country_loss is not None:
-            country_predictions = country_logits > self.config.threshold
-        else:
-            country_predictions = None
+        # if country_loss is not None:
+        #     country_predictions = country_logits > self.config.threshold
+        # else:
+        #     country_predictions = None
 
         return UniRelOutput(
             loss=loss,
