@@ -16,12 +16,13 @@ class UniRelOutput(ModelOutput):
     tail_preds: Optional[torch.FloatTensor] = None
     span_preds: Optional[torch.FloatTensor] = None
 
-class UniRelModel_ner(BertPreTrainedModel):
+class UniRelModel_ner_LSTM(BertPreTrainedModel):
     """
     Model for learning Interaction Map
     """
     def __init__(self, config, model_dir=None):
-        super(UniRelModel_ner, self).__init__(config=config)
+        super(UniRelModel_ner_LSTM, self).__init__(config=config)
+        print(f"This is the UniRel with LOC+PER and LSTM")
         self.config = config
         if model_dir is not None:
             self.bert = BertModel.from_pretrained(model_dir, config=config)
@@ -40,6 +41,7 @@ class UniRelModel_ner(BertPreTrainedModel):
             self.value_linear = nn.Linear(768, 64)
         # print(f"self.config.threshold: {self.config.threshold}")
         self.sigmoid = nn.Sigmoid()
+        self.lstm = nn.LSTM(5, 5, 1, batch_first=True, dropout=config.hidden_dropout_prob)
     def forward(
         self,
         input_ids=None,
@@ -82,25 +84,36 @@ class UniRelModel_ner(BertPreTrainedModel):
             BATCH_SIZE, ATT_HEADS, ATT_LEN, _ = attentions_scores.size()
             ATT_LAYERS = len(attentions_scores)
             if self.config.test_data_type == "unirel_span":
-            # 0-2: head, 3-5: tail, 6-7: span, 8: LOC, 9: ORG, 10: PER, 11: Country
-                head_logits = self.sigmoid(
+            # 0-2: head, 3-5: tail, 6-7: span, 8-9: LOC, 10-11: PER
+                head_logits_ = self.sigmoid(
                         attentions_scores[:, :3, :, :].mean(1)
                     )
-                tail_logits = self.sigmoid(
+                tail_logits_ = self.sigmoid(
                         attentions_scores[:, 3:6, :, :].mean(1)
                     )
-                span_logits = self.sigmoid(
+                span_logits_ = self.sigmoid(
                         attentions_scores[:, 6:8, :, :].mean(1)
                     )
-                loc_logits = self.sigmoid(attentions_scores[:, 8:10, :, :].mean(1))
-                # org_logits = self.sigmoid(attentions_scores[:, 9, :, :])
-                per_logits = self.sigmoid(attentions_scores[:, 10:, :, :].mean(1))
-                # country_logits = self.sigmoid(attentions_scores[:, 11, :, :])
+                loc_logits_ = self.sigmoid(attentions_scores[:, 8:10, :, :].mean(1))
+                per_logits_ = self.sigmoid(attentions_scores[:, 10:, :, :].mean(1))
+
+                # concatentate the head_logits, tail_logits, span_logits, loc_logits, per_logits
+                concat_logits = torch.cat((head_logits_, tail_logits_, span_logits_, loc_logits_, per_logits_), dim=-1)
+                concat_logits = concat_logits.view(concat_logits.shape[0], -1, 5)
+                concat_logits = self.sigmoid(self.lstm(concat_logits)[0])
+                head_logits = concat_logits[:, :, 0].reshape(-1, head_logits_.shape[1], head_logits_.shape[2])
+                tail_logits = concat_logits[:, :, 1].reshape(-1, tail_logits_.shape[1], tail_logits_.shape[2])
+                span_logits = concat_logits[:, :, 2].reshape(-1, span_logits_.shape[1], span_logits_.shape[2])
+                loc_logits = concat_logits[:, :, 3].reshape(-1, loc_logits_.shape[1], loc_logits_.shape[2])
+                per_logits = concat_logits[:, :, 4].reshape(-1, per_logits_.shape[1], per_logits_.shape[2])
 
             else:
                 tail_logits = nn.Sigmoid()(
                         attentions_scores[:, :, :, :].mean(1)
                     )
+
+
+
             # print(f'attentions_scores shape: {attentions_scores.shape}')
         else:   # is_separate_ablation
             # Encoding the sentence and relations in a separate manner, and add another attention layer
@@ -164,13 +177,6 @@ class UniRelModel_ner(BertPreTrainedModel):
                 loss = loc_loss
             else:
                 loss += loc_loss
-        # if org_label is not None and len(org_label[0]) == len(span_label[0]):
-        #     org_loss = nn.BCELoss()(org_logits.float().reshape(-1),
-        #                             org_label.reshape(-1).float())
-        #     if loss is None:
-        #         loss = org_loss
-        #     else:
-        #         loss += org_loss
         if per_label is not None and len(per_label[0]) == len(span_label[0]):
             per_loss = nn.BCELoss()(per_logits.float().reshape(-1),
                                     per_label.reshape(-1).float())
@@ -178,13 +184,7 @@ class UniRelModel_ner(BertPreTrainedModel):
                 loss = per_loss
             else:
                 loss += per_loss
-        # if country_label is not None and len(country_label[0]) == len(span_label[0]):
-        #     country_loss = nn.BCELoss()(country_logits.float().reshape(-1),
-        #                             country_label.reshape(-1).float())
-        #     if loss is None:
-        #         loss = country_loss
-        #     else:
-        #         loss += country_loss
+
         if tail_logits is not None:
             tail_predictions = tail_logits > self.config.threshold
         else:

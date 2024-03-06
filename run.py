@@ -26,11 +26,14 @@ from dataprocess.dataset import UniRelDataset, UniRelSpanDataset
 
 from model.model_transformers import  UniRelModel
 from model.model_transformers_ner import UniRelModel_ner
+from model.model_transformers_ner_LSTM import UniRelModel_ner_LSTM
 
 from dataprocess.data_extractor import *
 from dataprocess.data_metric import *
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+UniRelModel = UniRelModel_ner_LSTM
 
 DataProcessorDict = {
     "nyt_all_sa": UniRelDataProcessor,
@@ -43,15 +46,13 @@ DatasetDict = {
 }
 
 ModelDict = {
-    # "nyt_all_sa": UniRelModel,
-    "nyt_all_sa": UniRelModel_ner,
-    "unirel_span": UniRelModel_ner
+    "nyt_all_sa": UniRelModel,
+    "unirel_span": UniRelModel
 }
 
 PredictModelDict = {
-    # "nyt_all_sa": UniRelModel,
-    "nyt_all_sa": UniRelModel_ner,
-    "unirel_span": UniRelModel_ner
+    "nyt_all_sa": UniRelModel,
+    "unirel_span": UniRelModel
 }
 
 DataMetricDict = {
@@ -294,7 +295,7 @@ if __name__ == '__main__':
 
     wandb.init(
         project="Unirel",
-        name="Unirel-ner(LOC,PER)-NYT-bsz24)",
+        name="Unirel-ner(LOC,PER)-LSTM-NYT-bsz8)",
     )
 
     # save your trained model checkpoint to wandb
@@ -358,7 +359,7 @@ if __name__ == '__main__':
                 "/")[-1] if checkpoint.find("checkpoint") != -1 else ""
             # here it reload the model from the checkpoint
 
-            """            
+            """           
             with torch.no_grad():
                 model = PredictModelType.from_pretrained(checkpoint, config=config)
                 model.eval()

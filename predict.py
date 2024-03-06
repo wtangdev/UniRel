@@ -5,11 +5,14 @@ import torch
 from transformers import BertTokenizerFast
 import dataprocess.rel2text
 from model.model_transformers import UniRelModel
+from model.model_transformers_ner import UniRelModel_ner
+from model.model_transformers_ner_LSTM import UniRelModel_ner_LSTM
 from dataprocess.data_extractor import *
 from dataprocess.data_metric import *
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
+UniRelModel = UniRelModel_ner_LSTM
 class UniRel:
     def __init__(self, model_path, max_length=128, dataset_name="nyt") -> None:
         self.model = UniRelModel.from_pretrained(model_path)
@@ -244,7 +247,8 @@ class UniRel:
 
 
 if __name__ == "__main__":
-    model_path = "/home/tian/Projects/UniRel/model/nyt-checkpoint-final"
+    # model_path = "/home/tian/Projects/UniRel/model/nyt-checkpoint-final"
+    model_path = "/home/tian/Projects/UniRel/output/nyt-ner-LOC-PER-bsz8/checkpoint-520000"
     unirel = UniRel(model_path, dataset_name="nyt")
     
     # print(unirel.predict("In perhaps the most ambitious Mekong cruise attempt, Impulse Tourism, an operator based in Chiang Mai, Thailand, is organizing an expedition starting in November in Jinghong, a small city in the Yunnan province in China."))
